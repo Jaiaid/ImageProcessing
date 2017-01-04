@@ -2,7 +2,9 @@
 #include<fstream>
 #include<cstring>
 #include<cstdlib>
+
 #include"imageprocessor.h"
+
 
 using namespace std;
 

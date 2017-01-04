@@ -1,6 +1,7 @@
 #include<iostream>
 #include<cmath>
-#include"imageclass.h"
+
+#include"ppm.h"
 
 
 using namespace std;
@@ -99,7 +100,7 @@ class DIP
 	 * To get the filtered result of a pixel of input image
 	 * out of boundary neighbor problem is handled 
 	*/
-	int getFilteredVal(unsigned char **srcPixelMatrix,int width,int height,int pixelAttribute,int colorDepth,int x,int y)
+	int getFilteredVal(pixel_t **srcPixelMatrix,int width,int height,int pixelAttribute,int colorDepth,int x,int y)
 	{
 		int sum=0,tmp=(this->filterWidth-1)/2,tmp1=(this->filterHeight-1)/2,tmp2=pixelAttribute*width;
 		float result;
@@ -142,7 +143,7 @@ public:
 
 int DIP::nnresize(char *destFileName,int targetWidth,int targetHeight)
 {
-	unsigned char **srcPixelMatrix,**destPixelMatrix;
+	pixel_t **srcPixelMatrix,**destPixelMatrix;
 	int height,width,pixelAttribute;
 	Image *destFile=new PPM(destFileName);
 	
@@ -157,10 +158,10 @@ int DIP::nnresize(char *destFileName,int targetWidth,int targetHeight)
 	width=this->srcFile->getWidth();
 	pixelAttribute=this->srcFile->getPixelAttribute();
 
-	destPixelMatrix=new unsigned char *[targetHeight];
+	destPixelMatrix=new pixel_t *[targetHeight];
 	for(int y=0;y<targetHeight;y++)
 	{
-		destPixelMatrix[y]=new unsigned char[targetWidth*pixelAttribute];
+		destPixelMatrix[y]=new pixel_t [targetWidth*pixelAttribute];
 
 		for(int x=0,indx2=0;x<targetWidth;x++,indx2+=pixelAttribute)
 		{
@@ -195,7 +196,7 @@ int DIP::nnresize(char *destFileName,int targetWidth,int targetHeight)
 	
 int DIP::bilresize(char *destFileName,int targetWidth,int targetHeight)
 {
-	unsigned char **srcPixelMatrix,**destPixelMatrix;
+	pixel_t **srcPixelMatrix,**destPixelMatrix;
 	int height,width,pixelAttribute;
 	Image *destFile=new PPM(destFileName);
 	
@@ -210,13 +211,13 @@ int DIP::bilresize(char *destFileName,int targetWidth,int targetHeight)
 	width=this->srcFile->getWidth();
 	pixelAttribute=this->srcFile->getPixelAttribute();
 
-	destPixelMatrix=new unsigned char *[targetHeight];
+	destPixelMatrix=new pixel_t *[targetHeight];
 	for(int y=0;y<targetHeight;y++)
 	{
 		float sum1,sum2,oldy,oldx;
 		int cel_x,cel_y,floor_x,floor_y;
 		
-		destPixelMatrix[y]=new unsigned char[targetWidth*pixelAttribute];
+		destPixelMatrix[y]=new pixel_t [targetWidth*pixelAttribute];
 
 		if(targetHeight==1){
 			oldy=0;
@@ -269,7 +270,7 @@ int DIP::bilresize(char *destFileName,int targetWidth,int targetHeight)
 
 int DIP::neg(char *destFileName)
 {
-	unsigned char **srcPixelMatrix,**destPixelMatrix;
+	pixel_t **srcPixelMatrix,**destPixelMatrix;
 	int height,width,pixelAttribute,maxColor;
 	Image *destFile=new PPM(destFileName);
 	
@@ -285,10 +286,10 @@ int DIP::neg(char *destFileName)
 	pixelAttribute=this->srcFile->getPixelAttribute();
 	maxColor=(1<<this->srcFile->getColorDepthBit())-1;
 
-	destPixelMatrix=new unsigned char *[height];
+	destPixelMatrix=new pixel_t *[height];
 	for(int y=0;y<height;y++)
 	{
-		destPixelMatrix[y]=new unsigned char[width*pixelAttribute];
+		destPixelMatrix[y]=new pixel_t [width*pixelAttribute];
 		for(int x=0,indx2=0;x<width;x++,indx2+=pixelAttribute)
 		{
 			destPixelMatrix[y][indx2]=maxColor-srcPixelMatrix[y][indx2];
@@ -305,7 +306,7 @@ int DIP::neg(char *destFileName)
 
 int DIP::gammacorrection(char *destFileName,float gamma)
 {
-	unsigned char **srcPixelMatrix,**destPixelMatrix;
+	pixel_t **srcPixelMatrix,**destPixelMatrix;
 	int height,width,pixelAttribute,colorNum;
 	double constant,possibleGammaVal[256];
 	Image *destFile=new PPM(destFileName);
@@ -332,10 +333,10 @@ int DIP::gammacorrection(char *destFileName,float gamma)
 		possibleGammaVal[l]=pow(l,gamma);
 	}
 	
-	destPixelMatrix=new unsigned char *[height];
+	destPixelMatrix=new pixel_t *[height];
 	for(int y=0;y<height;y++)
 	{
-		destPixelMatrix[y]=new unsigned char[width*pixelAttribute];
+		destPixelMatrix[y]=new pixel_t [width*pixelAttribute];
 
 		for(int x=0,indx2=0;x<width;x++,indx2+=pixelAttribute)
 		{
@@ -353,7 +354,7 @@ int DIP::gammacorrection(char *destFileName,float gamma)
 
 int DIP::filtering(char *destFileName,int filterType)
 {
-	unsigned char **srcPixelMatrix,**destPixelMatrix;
+	pixel_t **srcPixelMatrix,**destPixelMatrix;
 	int height,width,pixelAttribute,colorDepth;
 	Image *destFile=new PPM(destFileName);
 	
@@ -370,10 +371,10 @@ int DIP::filtering(char *destFileName,int filterType)
 	
 	this->createFilter(filterType);
 		
-	destPixelMatrix=new unsigned char *[height];
+	destPixelMatrix=new pixel_t *[height];
 	for(int y=0;y<height;y++)
 	{
-		destPixelMatrix[y]=new unsigned char[width*pixelAttribute];
+		destPixelMatrix[y]=new pixel_t [width*pixelAttribute];
 		for(int x=0,indx2=0;x<width;x++,indx2+=pixelAttribute)
 		{
 			destPixelMatrix[y][indx2]=(unsigned char)getFilteredVal(srcPixelMatrix,width,height,pixelAttribute,colorDepth,indx2,y);
