@@ -26,8 +26,9 @@ int main(int argc, char **argv)
 		cout<<"----------------------------"<<endl;
 		cout<<"1.resize <b(for bilinear approach)\\(for nearest neighbor approach)> <width> <height>"<<endl;
 		cout<<"2.neg"<<endl;
-		cout<<"3.gamma <gamma value>"<<endl;
-		cout<<"4.smooth <filter type>"<<endl;
+		cout<<"3.TH <threshold value>"<<endl;
+		cout<<"4.gamma <gamma value>"<<endl;
+		cout<<"5.filter <filter type>"<<endl;
 		
 		return 0;
 	}
@@ -53,10 +54,13 @@ int main(int argc, char **argv)
 	else if(strcmp(argv[2],"neg")==0 && argc==4){
 		imagePrcsr.neg(argv[3]);
 	}
+	else if(strcmp(argv[2],"TH")==0 && argc==5){
+		imagePrcsr.threshold(argv[4],atoi(argv[3]));
+	}
 	else if(strcmp(argv[2],"gamma")==0 && argc==5){
 		imagePrcsr.gammacorrection(argv[4],atof(argv[3]));
 	}
-	else if(strcmp(argv[2],"smooth")==0 && argc==5){
+	else if(strcmp(argv[2],"filter")==0 && argc==5){
 		imagePrcsr.filtering(argv[4],atoi(argv[3]));
 	}
 	else{

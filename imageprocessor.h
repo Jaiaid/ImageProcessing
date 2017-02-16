@@ -2,6 +2,7 @@
 #include<cmath>
 
 #include"ppm.h"
+#include"pgm.h"
 
 
 using namespace std;
@@ -24,16 +25,65 @@ class DIP
 									//used to make the filter mask operation operation lighter(only one floating point multiplication is needed)
 	
 	/*
+	 *strart index of extension of file name is returned, will be removed later
+	*/
+	int typeExtensionStrIndx(char *fileName);
+	/*
 	 * method to create filter
 	 * first nine types are for smoothing 
 	 * after type 10 are for sharpening
 	*/ 
-	int createFilter(int filterType)
+	int createFilter(int filterType);
+	/*
+	 * To get the filtered result of a pixel of input image
+	 * out of boundary neighbor problem is handled 
+	*/
+	int getFilteredVal(pixel_t **srcPixelMatrix,int width,int height,int pixelAttribute,int colorDepth,int x,int y);
+	
+public:
+	DIP(char *srcFileName)
 	{
-		if(filter!=NULL){
-			delete[] filter;
+		if(strcmp(&srcFileName[this->typeExtensionStrIndx(srcFileName)],"ppm")==0){
+			srcFile=new PPM(srcFileName);
 		}
-		
+		else if(strcmp(&srcFileName[this->typeExtensionStrIndx(srcFileName)],"pgm")==0){
+			srcFile=new PGM(srcFileName);
+		}
+
+		filter=NULL;
+	}
+	
+	int nnresize(char *destFileName,int targetWidth,int targetHeight);		//resizing using nearest neighbor approach and saves it as destFileName
+	int bilresize(char *destFileName,int targetWidth,int targetHeight);		//resizing using nearest bilinear approach and saves it as destFileName
+	int neg(char *destFileName);											//negative image and saves it as destFileName
+	int threshold(char *destFileName,int threshold);                        //intensity thresholding
+	int gammacorrection(char *destFileName,float gamma);					//intensity transform by gamma correction and saves it as destFileName
+	int filtering(char *destFileName,int type);                             //filter image with filter no. type and saves it as destFileName
+};
+
+
+
+int DIP::typeExtensionStrIndx(char *fileName)
+{
+	int ans;
+	for(int l=0;fileName[l]!='\0';l++)
+	{
+		if(fileName[l]=='.'){
+			ans=l;		
+		}
+	}
+
+	return ans+1;
+}
+
+
+int DIP::createFilter(int filterType)
+{
+	if(filter!=NULL){
+		delete[] filter;
+	}
+
+	if(filterType != 0){
 		switch(filterType)
 		{
 			case 1:
@@ -69,7 +119,7 @@ class DIP
 				this->filterConstant=1.0/9;
 				break;
 		}
-		
+
 		filter=new unsigned int *[this->filterHeight];
 		for(int l=0;l<this->filterHeight;l++)
 		{
@@ -79,7 +129,7 @@ class DIP
 				filter[l][l1]=1;
 			}
 		}
-		
+
 		if(filterType==11){
 			filter[1][1]=5,filter[0][0]=0,filter[0][2]=0,filter[2][0]=0,filter[2][2]=0;
 			filter[0][1]=-1,filter[1][0]=-1,filter[1][2]=-1,filter[2][1]=-1;
@@ -92,61 +142,66 @@ class DIP
 			filter[1][1]=17,filter[0][0]=-1,filter[0][2]=-1,filter[2][0]=-1,filter[2][2]=-1;
 			filter[0][1]=-1,filter[1][0]=-1,filter[1][2]=-1,filter[2][1]=-1;
 		}
-		
-		return 0;
 	}
-	
-	/*
-	 * To get the filtered result of a pixel of input image
-	 * out of boundary neighbor problem is handled 
-	*/
-	int getFilteredVal(pixel_t **srcPixelMatrix,int width,int height,int pixelAttribute,int colorDepth,int x,int y)
-	{
-		int sum=0,tmp=(this->filterWidth-1)/2,tmp1=(this->filterHeight-1)/2,tmp2=pixelAttribute*width;
-		float result;
+	else{
+		cin>>this->filterWidth>>this->filterHeight;
+		cin>>this->filterConstant;
 
-		for(int l=-tmp,indx1=y-tmp;l<=tmp;l++,indx1++)
+		filter=new unsigned int *[this->filterHeight];
+		for(int l=0;l<this->filterHeight;l++)
 		{
-			for(int l1=-tmp1,indx2=x-tmp1*pixelAttribute;l1<=tmp1;l1++,indx2+=pixelAttribute)
-			{	
-				if(indx1>=0 && indx1<height && indx2>=0 && indx2<tmp2){
-					sum+=this->filter[l+tmp][l1+tmp1]*srcPixelMatrix[indx1][indx2];
-				}
+			filter[l]=new unsigned int[this->filterWidth];
+			for(int l1=0;l1<this->filterWidth;l1++)
+			{
+				cin>>filter[l][l1];
 			}
 		}
-		
-		result=sum*this->filterConstant+0.5;
-		if(result<0){
-			result=0;
-		}
-		else if(result>=colorDepth){
-			result=colorDepth-1;
-		}
-		
-		return (int)(result);
 	}
-	
-public:
-	DIP(char *srcFileName)
-	{
-		srcFile=new PPM(srcFileName);
-		filter=NULL;
-	}
-	
-	int nnresize(char *destFileName,int targetWidth,int targetHeight);		//resizing using nearest neighbor approach and saves it as destFileName
-	int bilresize(char *destFileName,int targetWidth,int targetHeight);		//resizing using nearest bilinear approach and saves it as destFileName
-	int neg(char *destFileName);											//negative image and saves it as destFileName
-	int gammacorrection(char *destFileName,float gamma);					//intensity transform by gamma correction and saves it as destFileName
-	int filtering(char *destFileName,int type);                             //filter image with filter no. type and saves it as destFileName
-};
 
+	return 0;
+}
+
+
+
+int DIP::getFilteredVal(pixel_t **srcPixelMatrix,int width,int height,int pixelAttribute,int colorDepth,int x,int y)
+{
+	int sum=0,tmp=(this->filterWidth-1)/2,tmp1=(this->filterHeight-1)/2,tmp2=CHANNEL_PER_PIXEL*width;
+	float result;
+
+	for(int l=-tmp,indx1=y-tmp;l<=tmp;l++,indx1++)
+	{
+		for(int l1=-tmp1,indx2=x-tmp1*CHANNEL_PER_PIXEL;l1<=tmp1;l1++,indx2+=CHANNEL_PER_PIXEL)
+		{	
+			if(indx1>=0 && indx1<height && indx2>=0 && indx2<tmp2){
+				sum+=this->filter[l+tmp][l1+tmp1]*srcPixelMatrix[indx1][indx2];
+			}
+		}
+	}
+
+	result=sum*this->filterConstant+0.5;
+	if(result<0){
+		result=0;
+	}
+	else  if(result>=colorDepth){
+		result=colorDepth-1;
+	}
+
+	return (int)(result);
+}
 
 int DIP::nnresize(char *destFileName,int targetWidth,int targetHeight)
 {
 	pixel_t **srcPixelMatrix,**destPixelMatrix;
 	int height,width,pixelAttribute;
-	Image *destFile=new PPM(destFileName);
+	Image *destFile;
 	
+	if(strcmp(&destFileName[this->typeExtensionStrIndx(destFileName)],"ppm")==0){
+		destFile=new PPM(destFileName);
+	}
+	else if(strcmp(&destFileName[this->typeExtensionStrIndx(destFileName)],"pgm")==0){
+		destFile=new PGM(destFileName);
+	}	
+
 	if(!(this->srcFile->exists())){
 		cout<<"Source file not found"<<endl;
 		return -1;
@@ -161,9 +216,9 @@ int DIP::nnresize(char *destFileName,int targetWidth,int targetHeight)
 	destPixelMatrix=new pixel_t *[targetHeight];
 	for(int y=0;y<targetHeight;y++)
 	{
-		destPixelMatrix[y]=new pixel_t [targetWidth*pixelAttribute];
+		destPixelMatrix[y]=new pixel_t [targetWidth*CHANNEL_PER_PIXEL];
 
-		for(int x=0,indx2=0;x<targetWidth;x++,indx2+=pixelAttribute)
+		for(int x=0,indx2=0;x<targetWidth;x++,indx2+=CHANNEL_PER_PIXEL)
 		{
 			int oldx,oldy;
 			
@@ -181,7 +236,7 @@ int DIP::nnresize(char *destFileName,int targetWidth,int targetHeight)
 				oldx=(int)(((width-1)*x*1.0)/(targetWidth-1)+0.5);
 			}
 
-			int oldindx2=oldx*pixelAttribute;
+			int oldindx2=oldx*CHANNEL_PER_PIXEL;
 			destPixelMatrix[y][indx2]=srcPixelMatrix[oldy][oldindx2];
 			destPixelMatrix[y][indx2+1]=srcPixelMatrix[oldy][oldindx2+1];
 			destPixelMatrix[y][indx2+2]=srcPixelMatrix[oldy][oldindx2+2];
@@ -198,7 +253,14 @@ int DIP::bilresize(char *destFileName,int targetWidth,int targetHeight)
 {
 	pixel_t **srcPixelMatrix,**destPixelMatrix;
 	int height,width,pixelAttribute;
-	Image *destFile=new PPM(destFileName);
+	Image *destFile;
+
+	if(strcmp(&destFileName[this->typeExtensionStrIndx(destFileName)],"ppm")==0){
+		destFile=new PPM(destFileName);
+	}
+	else if(strcmp(&destFileName[this->typeExtensionStrIndx(destFileName)],"pgm")==0){
+		destFile=new PGM(destFileName);
+	}
 	
 	if(!(this->srcFile->exists())){
 		cout<<"Source file not found"<<endl;
@@ -217,7 +279,7 @@ int DIP::bilresize(char *destFileName,int targetWidth,int targetHeight)
 		float sum1,sum2,oldy,oldx;
 		int cel_x,cel_y,floor_x,floor_y;
 		
-		destPixelMatrix[y]=new pixel_t [targetWidth*pixelAttribute];
+		destPixelMatrix[y]=new pixel_t [targetWidth*CHANNEL_PER_PIXEL];
 
 		if(targetHeight==1){
 			oldy=0;
@@ -245,8 +307,8 @@ int DIP::bilresize(char *destFileName,int targetWidth,int targetHeight)
 				cel_x=(int)(oldx+0.5);
 			}
 			
-			indx1=floor_y,indx2=floor_x*pixelAttribute;
-			indx3=cel_y,indx4=cel_x*pixelAttribute;
+			indx1=floor_y,indx2=floor_x*CHANNEL_PER_PIXEL;
+			indx3=cel_y,indx4=cel_x*CHANNEL_PER_PIXEL;
 			
 			sum1=(cel_x-oldx)*srcPixelMatrix[indx1][indx2]+(1-cel_x+oldx)*srcPixelMatrix[indx1][indx4];
 			sum2=(cel_x-oldx)*srcPixelMatrix[indx3][indx2]+(1-cel_x+oldx)*srcPixelMatrix[indx3][indx4];
@@ -272,13 +334,20 @@ int DIP::neg(char *destFileName)
 {
 	pixel_t **srcPixelMatrix,**destPixelMatrix;
 	int height,width,pixelAttribute,maxColor;
-	Image *destFile=new PPM(destFileName);
+	Image *destFile;
 	
+	if(strcmp(&destFileName[this->typeExtensionStrIndx(destFileName)],"ppm")==0){
+		destFile=new PPM(destFileName);
+	}
+	else if(strcmp(&destFileName[this->typeExtensionStrIndx(destFileName)],"pgm")==0){
+		destFile=new PGM(destFileName);
+	}
+
 	if(!(this->srcFile->exists())){
 		cout<<"Source file not found"<<endl;
 		return -1;
 	}
-	
+
 	srcPixelMatrix=this->srcFile->getPixelMatrix();
 	
 	height=this->srcFile->getHeight();
@@ -289,28 +358,84 @@ int DIP::neg(char *destFileName)
 	destPixelMatrix=new pixel_t *[height];
 	for(int y=0;y<height;y++)
 	{
-		destPixelMatrix[y]=new pixel_t [width*pixelAttribute];
-		for(int x=0,indx2=0;x<width;x++,indx2+=pixelAttribute)
+		destPixelMatrix[y]=new pixel_t [width*CHANNEL_PER_PIXEL];
+		for(int x=0,indx2=0;x<width;x++,indx2+=CHANNEL_PER_PIXEL)
 		{
 			destPixelMatrix[y][indx2]=maxColor-srcPixelMatrix[y][indx2];
 			destPixelMatrix[y][indx2+1]=maxColor-srcPixelMatrix[y][indx2+1];
 			destPixelMatrix[y][indx2+2]=maxColor-srcPixelMatrix[y][indx2+2];
 		}
 	}
-	
+
 	destFile->save(destFileName,destPixelMatrix,width,height);	//saving file with created pixel matix
 	delete[] destPixelMatrix;									//free memory
 	
 	return 0;
 }
 
+int DIP::threshold(char *destFileName,int threshold)
+{
+	pixel_t **srcPixelMatrix,**destPixelMatrix;
+	int height,width,pixelAttribute,maxColor;
+	Image *destFile;
+	
+	if(strcmp(&destFileName[this->typeExtensionStrIndx(destFileName)],"ppm")==0){
+		destFile=new PPM(destFileName);
+	}
+	else if(strcmp(&destFileName[this->typeExtensionStrIndx(destFileName)],"pgm")==0){
+		destFile=new PGM(destFileName);
+	}
+
+	if(!(this->srcFile->exists())){
+		cout<<"Source file not found"<<endl;
+		return -1;
+	}
+
+	srcPixelMatrix=this->srcFile->getPixelMatrix();
+	
+	height=this->srcFile->getHeight();
+	width=this->srcFile->getWidth();
+	pixelAttribute=this->srcFile->getPixelAttribute();
+	maxColor=(1<<this->srcFile->getColorDepthBit())-1;
+
+	destPixelMatrix=new pixel_t *[height];
+	for(int y=0;y<height;y++)
+	{
+		destPixelMatrix[y]=new pixel_t [width*CHANNEL_PER_PIXEL];
+		for(int x=0,indx2=0;x<width;x++,indx2+=CHANNEL_PER_PIXEL)
+		{
+			if(srcPixelMatrix[y][indx2]>=threshold) destPixelMatrix[y][indx2]=maxColor;
+			else destPixelMatrix[y][indx2]=0;
+
+			if(srcPixelMatrix[y][indx2+1]>=threshold) destPixelMatrix[y][indx2+1]=maxColor;
+			else destPixelMatrix[y][indx2+1]=0;
+
+			if(srcPixelMatrix[y][indx2+2]>=threshold) destPixelMatrix[y][indx2+2]=maxColor;
+			else destPixelMatrix[y][indx2+2]=0;
+		}
+	}
+
+	destFile->save(destFileName,destPixelMatrix,width,height);	//saving file with created pixel matix
+	delete[] destPixelMatrix;									//free memory
+	
+	return 0;
+}
+
+
 int DIP::gammacorrection(char *destFileName,float gamma)
 {
 	pixel_t **srcPixelMatrix,**destPixelMatrix;
 	int height,width,pixelAttribute,colorNum;
 	double constant,possibleGammaVal[256];
-	Image *destFile=new PPM(destFileName);
+	Image *destFile;
 	
+	if(strcmp(&destFileName[this->typeExtensionStrIndx(destFileName)],"ppm")==0){
+		destFile=new PPM(destFileName);
+	}
+	else if(strcmp(&destFileName[this->typeExtensionStrIndx(destFileName)],"pgm")==0){
+		destFile=new PGM(destFileName);
+	}
+
 	if(!(this->srcFile->exists())){
 		cout<<"Source file not found"<<endl;
 		return -1;
@@ -336,9 +461,9 @@ int DIP::gammacorrection(char *destFileName,float gamma)
 	destPixelMatrix=new pixel_t *[height];
 	for(int y=0;y<height;y++)
 	{
-		destPixelMatrix[y]=new pixel_t [width*pixelAttribute];
+		destPixelMatrix[y]=new pixel_t [width*CHANNEL_PER_PIXEL];
 
-		for(int x=0,indx2=0;x<width;x++,indx2+=pixelAttribute)
+		for(int x=0,indx2=0;x<width;x++,indx2+=CHANNEL_PER_PIXEL)
 		{
 			destPixelMatrix[y][indx2]=constant*possibleGammaVal[srcPixelMatrix[y][indx2]];
 			destPixelMatrix[y][indx2+1]=constant*possibleGammaVal[srcPixelMatrix[y][indx2+1]];
@@ -356,8 +481,15 @@ int DIP::filtering(char *destFileName,int filterType)
 {
 	pixel_t **srcPixelMatrix,**destPixelMatrix;
 	int height,width,pixelAttribute,colorDepth;
-	Image *destFile=new PPM(destFileName);
+	Image *destFile;
 	
+	if(strcmp(&destFileName[this->typeExtensionStrIndx(destFileName)],"ppm")==0){
+		destFile=new PPM(destFileName);
+	}
+	else if(strcmp(&destFileName[this->typeExtensionStrIndx(destFileName)],"pgm")==0){
+		destFile=new PGM(destFileName);
+	}
+
 	if(!(this->srcFile->exists())){
 		cout<<"Source file not found"<<endl;
 		return -1;
@@ -374,8 +506,8 @@ int DIP::filtering(char *destFileName,int filterType)
 	destPixelMatrix=new pixel_t *[height];
 	for(int y=0;y<height;y++)
 	{
-		destPixelMatrix[y]=new pixel_t [width*pixelAttribute];
-		for(int x=0,indx2=0;x<width;x++,indx2+=pixelAttribute)
+		destPixelMatrix[y]=new pixel_t [width*CHANNEL_PER_PIXEL];
+		for(int x=0,indx2=0;x<width;x++,indx2+=CHANNEL_PER_PIXEL)
 		{
 			destPixelMatrix[y][indx2]=(unsigned char)getFilteredVal(srcPixelMatrix,width,height,pixelAttribute,colorDepth,indx2,y);
 			destPixelMatrix[y][indx2+1]=(unsigned char)getFilteredVal(srcPixelMatrix,width,height,pixelAttribute,colorDepth,indx2+1,y);

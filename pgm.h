@@ -1,8 +1,8 @@
 /*
  *An implementaion/extension of image class to ppm format 
 */
-#ifndef PPM_H
-#define PPM_H
+#ifndef PGM_H
+#define PGM_H
 
 #include<iostream>
 #include<fstream>
@@ -15,17 +15,17 @@
 
 using namespace std;
 
-class PPM : public Image
+class PGM : public Image
 {
 	char *name;
 public:
-	PPM(char *fileName);
+	PGM(char *fileName);
 	void save(char *fileName,pixel_t **src,int targetWidth,int targetHeight,...);
-	~PPM(){};
+	~PGM(){};
 };
 
 
-PPM::PPM(char *fileName)
+PGM::PGM(char *fileName)
 {
 	char header[MAX_HEADER_LENGTH+1];
 	pixel_t **pixelMatrix;
@@ -71,12 +71,13 @@ PPM::PPM(char *fileName)
 	*/
 	this->setHeight(h),this->setWidth(w);
 	this->setColoDepthBit(8);
-	this->setPixelAttribute(3);
+	this->setPixelAttribute(1);
 
 	/*
 	 *extract pixel array and save the pointer as base object attribute 
 	*/ 
 	transformedMatrix = new unsigned char* [h];
+
 	for(int l=0,size=w*this->getPixelAttribute();l<h;l++)
 	{
 		transformedMatrix[l] = new unsigned char [size];
@@ -90,8 +91,6 @@ PPM::PPM(char *fileName)
 		for(int l1=0,l2=0,gap=this->getPixelAttribute();l1<size;l1+=CHANNEL_PER_PIXEL,l2+=gap)
 		{
 			pixelMatrix[l][l1] = (unsigned int)transformedMatrix[l][l2];
-			pixelMatrix[l][l1+1] = (unsigned int)transformedMatrix[l][l2+1];
-			pixelMatrix[l][l1+2] = (unsigned int)transformedMatrix[l][l2+2];
 		}
 	}
 	this->setPixelMatrix(pixelMatrix);
@@ -105,7 +104,7 @@ PPM::PPM(char *fileName)
 	delete[] transformedMatrix;
 }
 
-void PPM::save(char *fileName,pixel_t **srcPixelMatrix,int targetWidth,int targetHeight,...)
+void PGM::save(char *fileName,pixel_t **srcPixelMatrix,int targetWidth,int targetHeight,...)
 {
 	ofstream file;
 	/*
@@ -120,7 +119,7 @@ void PPM::save(char *fileName,pixel_t **srcPixelMatrix,int targetWidth,int targe
 		cout<<"Saving output file failed"<<endl;
 	}
 	
-	file<<"P6"<<endl;
+	file<<"P5"<<endl;
 	file<<targetWidth<<' '<<targetHeight<<endl;
 	file<<"255"<<endl;
 	
@@ -131,8 +130,6 @@ void PPM::save(char *fileName,pixel_t **srcPixelMatrix,int targetWidth,int targe
 		for(int l1=0,l2=0,gap=this->getPixelAttribute();l1<size;l1+=gap,l2+=CHANNEL_PER_PIXEL)
 		{
 			transformedMatrix[l][l1] = (unsigned char)srcPixelMatrix[l][l2];
-			transformedMatrix[l][l1+1] = (unsigned char)srcPixelMatrix[l][l2+1];
-			transformedMatrix[l][l1+2] = (unsigned char)srcPixelMatrix[l][l2+2];
 		}
 	}
 	for(int l=0,size=targetWidth*this->getPixelAttribute();l<targetHeight;l++)

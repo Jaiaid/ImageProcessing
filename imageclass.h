@@ -10,6 +10,7 @@
 #define IMGCLS_H
 
 #define pixel_t unsigned int
+#define CHANNEL_PER_PIXEL 3
 
 class Image
 {
