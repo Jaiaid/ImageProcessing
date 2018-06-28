@@ -1,7 +1,5 @@
-testimg/*
-*.ppm
-*.pgm
-*.txt
-imageclass
-image_processing
-imageprocessor
+*
+*.*
+!*.cpp
+!*.c
+!*.h
