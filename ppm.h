@@ -9,144 +9,150 @@
 #include<cstdio>
 #include<cstring>
 
-#include"imageclass.h"
+#include"imat.h"
 
 #define MAX_HEADER_LENGTH 255
 
 using namespace std;
 
-class PPM : public Image
+class PPM : public File
 {
-	char *name;
 public:
-	PPM(char *fileName);
-	void save(char *fileName,pixel_t **src,int targetWidth,int targetHeight,...);
-	~PPM(){};
+	PPM(char *name):File(name)
+	{
+		typeExtension[0] = 'p', typeExtension[1] = 'p', typeExtension[2] = 'm', typeExtension[3] = '\0';
+	}
+	IMat * extract();
+	int save(char *destFileName, IMat *image, ...);
 };
 
 
-PPM::PPM(char *fileName)
+IMat * PPM::extract()
 {
+	IMat *image;
 	char header[MAX_HEADER_LENGTH+1];
 	pixel_t **pixelMatrix;
 	int h,w;
-	ifstream file;
+	ifstream fin;
 	/*
  	 *this variable is used to transform pixel_t type to 1 byte format to save 
  	 *in ppm format. These is done to reduce number of call to file.write
 	*/
 	unsigned char **transformedMatrix;
 
-	file.open(fileName,ios::binary);
-	if(!file){
-		this->setExistance(false);
-		this->setPixelMatrix(NULL);
-		return;
-	}
-	else{
-		this->setExistance(true);
-	}
+	fin.open(this->name,ios::binary);
+	if(!fin) return NULL;
 
-	this->name = new char[strlen(fileName)+1];
-	strcpy(this->name,fileName);
+	image = new IMat;
 	/*
 	 *extracting the header 
 	*/
-	file.getline(header,MAX_HEADER_LENGTH);
+	fin.getline(header,MAX_HEADER_LENGTH);
 	//extracting comment if any 
-	file.getline(header,MAX_HEADER_LENGTH,'\n');
+	fin.getline(header,MAX_HEADER_LENGTH,'\n');
 	if(header[0]=='#'){
 		do
 		{
-			file.getline(header,MAX_HEADER_LENGTH,'\n');
+			fin.getline(header,MAX_HEADER_LENGTH,'\n');
 		}
 		while(header[0]=='#');
 	}
 	//comment extraction finished
 	sscanf(header,"%d%d",&w,&h);
-	file>>header;
-	file.get();
+	fin>>header;
+	fin.get();
 	/*
 	 * extraction finished
 	*/
-	this->setHeight(h),this->setWidth(w);
-	this->setColoDepthBit(8);
-	this->setPixelAttribute(3);
+	image->setHeight(h), image->setWidth(w);
+	image->setColoDepthBit(8);
+	image->setPixelAttribute(3);
 
 	/*
 	 *extract pixel array and save the pointer as base object attribute 
 	*/ 
 	transformedMatrix = new unsigned char* [h];
-	for(int l=0,size=w*this->getPixelAttribute();l<h;l++)
+	for(int l=0,size=w*image->getPixelAttribute();l<h;l++)
 	{
 		transformedMatrix[l] = new unsigned char [size];
-		file.read((char *)transformedMatrix[l],size);			//read each row
+		fin.read((char *)transformedMatrix[l],size);			//read each row
 	}
-
+	
 	pixelMatrix = new pixel_t *[h];
 	for(int l=0,size=w*CHANNEL_PER_PIXEL;l<h;l++)
 	{
 		pixelMatrix[l] = new pixel_t [size];
-		for(int l1=0,l2=0,gap=this->getPixelAttribute();l1<size;l1+=CHANNEL_PER_PIXEL,l2+=gap)
+		for(int l1=0,l2=0,gap=image->getPixelAttribute();l1<size;l1+=CHANNEL_PER_PIXEL,l2+=gap)
 		{
 			pixelMatrix[l][l1] = (unsigned int)transformedMatrix[l][l2];
 			pixelMatrix[l][l1+1] = (unsigned int)transformedMatrix[l][l2+1];
 			pixelMatrix[l][l1+2] = (unsigned int)transformedMatrix[l][l2+2];
 		}
 	}
-	this->setPixelMatrix(pixelMatrix);
+	image->setPixelMatrix(pixelMatrix);
 
-	file.close();
+	fin.close();
 
 	for(int l=0;l<h;l++)
 	{
 		delete[] transformedMatrix[l];
 	}
 	delete[] transformedMatrix;
+
+	return image;
 }
 
-void PPM::save(char *fileName,pixel_t **srcPixelMatrix,int targetWidth,int targetHeight,...)
+int PPM::save(char *destFileName, IMat *image, ...)
 {
-	ofstream file;
+	pixel_t **srcPixelMatrix;
+	int height, width;
+	ofstream of;
 	/*
 	 *this variable is used to transform pixel_t type to 1 byte format to save 
 	 *in ppm format. These is done to reduce number of call to file.write
 	*/
 	unsigned char **transformedMatrix;
 
-	file.open(fileName,ios::binary);
+	of.open(destFileName,ios::binary);
 	
-	if(!file){
+	if(!of){
 		cout<<"Saving output file failed"<<endl;
+		return -1;
 	}
 	
-	file<<"P6"<<endl;
-	file<<targetWidth<<' '<<targetHeight<<endl;
-	file<<"255"<<endl;
+	height = image->getHeight(), width = image->getWidth();
 	
-	transformedMatrix = new unsigned char* [targetHeight];
-	for(int l=0,size=targetWidth*this->getPixelAttribute();l<targetHeight;l++)
+	of<<"P6"<<endl;
+	of<<width<<' '<<height<<endl;
+	of<<"255"<<endl;
+	
+	srcPixelMatrix = image->getPixelMatrix();
+	transformedMatrix = new unsigned char* [height];
+	
+	for(int l=0,size=width*image->getPixelAttribute();l<height;l++)
 	{
 		transformedMatrix[l] = new unsigned char [size];
-		for(int l1=0,l2=0,gap=this->getPixelAttribute();l1<size;l1+=gap,l2+=CHANNEL_PER_PIXEL)
+		for(int l1=0,l2=0,gap=image->getPixelAttribute();l1<size;l1+=gap,l2+=CHANNEL_PER_PIXEL)
 		{
 			transformedMatrix[l][l1] = (unsigned char)srcPixelMatrix[l][l2];
 			transformedMatrix[l][l1+1] = (unsigned char)srcPixelMatrix[l][l2+1];
 			transformedMatrix[l][l1+2] = (unsigned char)srcPixelMatrix[l][l2+2];
 		}
 	}
-	for(int l=0,size=targetWidth*this->getPixelAttribute();l<targetHeight;l++)
+	for(int l=0,size=width*image->getPixelAttribute();l<height;l++)
 	{
-		file.write((char *)transformedMatrix[l],size);
+		of.write((char *)transformedMatrix[l],size);
 	}
 	
-	file.close();
+	of.close();
 	
-	for(int l=0;l<targetHeight;l++)
+	for(int l=0;l<height;l++)
 	{
 		delete[] transformedMatrix[l];
 	}
 	delete[] transformedMatrix;
+	
+	return 0;
 }
 
 #endif
