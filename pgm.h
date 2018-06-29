@@ -13,6 +13,7 @@
 #include"imat.h"
 
 #define MAX_HEADER_LENGTH 255
+#define PGM_CHANNEL_PER_PIXEL 1
 
 using namespace std;
 
@@ -69,12 +70,12 @@ IMat * PGM::extract()
 	*/
 	image->setHeight(h), image->setWidth(w);
 	image->setColoDepthBit(8);
-	image->setPixelAttribute(1);
+	image->setPixelAttribute(PGM_CHANNEL_PER_PIXEL);
 	/*
 	 *extract pixel array and save the pointer as base object attribute 
 	 */ 
 	transformedMatrix = new unsigned char* [h];
-	for(int l=0,size=w*image->getPixelAttribute();l<h;l++)
+	for(int l=0,size=w*PGM_CHANNEL_PER_PIXEL;l<h;l++)
 	{
 		transformedMatrix[l] = new unsigned char [size];
 		fin.read((char *)transformedMatrix[l],size);			//read each row
@@ -84,7 +85,7 @@ IMat * PGM::extract()
 	for(int l=0,size=w*CHANNEL_PER_PIXEL;l<h;l++)
 	{
 		pixelMatrix[l] = new pixel_t [size];
-		for(int l1=0,l2=0,gap=image->getPixelAttribute();l1<size;l1+=CHANNEL_PER_PIXEL,l2+=gap)
+		for(int l1=0,l2=0;l1<size;l1+=CHANNEL_PER_PIXEL,l2+=PGM_CHANNEL_PER_PIXEL)
 		{
 			pixelMatrix[l][l1] = (unsigned int)transformedMatrix[l][l2];
 		}
@@ -129,15 +130,15 @@ int PGM::save(char *destFileName, IMat *image, ...)
 	
 	srcPixelMatrix = image->getPixelMatrix();
 	transformedMatrix = new unsigned char* [height];
-	for(int l=0,size=width*image->getPixelAttribute();l<height;l++)
+	for(int l=0,size=width*PGM_CHANNEL_PER_PIXEL;l<height;l++)
 	{
 		transformedMatrix[l] = new unsigned char [size];
-		for(int l1=0,l2=0,gap=image->getPixelAttribute();l1<size;l1+=gap,l2+=CHANNEL_PER_PIXEL)
+		for(int l1=0,l2=0;l1<size;l1+=PGM_CHANNEL_PER_PIXEL,l2+=CHANNEL_PER_PIXEL)
 		{
 			transformedMatrix[l][l1] = (unsigned char)srcPixelMatrix[l][l2];
 		}
 	}
-	for(int l=0,size=width*image->getPixelAttribute();l<height;l++)
+	for(int l=0,size=width*PGM_CHANNEL_PER_PIXEL;l<height;l++)
 	{
 		of.write((char *)transformedMatrix[l],size);
 	}

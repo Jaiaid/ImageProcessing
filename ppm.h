@@ -12,6 +12,7 @@
 #include"imat.h"
 
 #define MAX_HEADER_LENGTH 255
+#define PPM_CHANNEL_PER_PIXEL 3
 
 using namespace std;
 
@@ -66,27 +67,27 @@ IMat * PPM::extract()
 	*/
 	image->setHeight(h), image->setWidth(w);
 	image->setColoDepthBit(8);
-	image->setPixelAttribute(3);
+	image->setPixelAttribute(PPM_CHANNEL_PER_PIXEL);
 
 	/*
 	 *extract pixel array and save the pointer as base object attribute 
 	*/ 
 	transformedMatrix = new unsigned char* [h];
-	for(int l=0,size=w*image->getPixelAttribute();l<h;l++)
+	for(int l=0,size=w*PPM_CHANNEL_PER_PIXEL;l<h;l++)
 	{
 		transformedMatrix[l] = new unsigned char [size];
 		fin.read((char *)transformedMatrix[l],size);			//read each row
 	}
 	
 	pixelMatrix = new pixel_t *[h];
-	for(int l=0,size=w*CHANNEL_PER_PIXEL;l<h;l++)
+	for(int l=0,size=w*PPM_CHANNEL_PER_PIXEL;l<h;l++)
 	{
 		pixelMatrix[l] = new pixel_t [size];
-		for(int l1=0,l2=0,gap=image->getPixelAttribute();l1<size;l1+=CHANNEL_PER_PIXEL,l2+=gap)
+		for(int l1=0;l1<size;l1+=PPM_CHANNEL_PER_PIXEL)
 		{
-			pixelMatrix[l][l1] = (unsigned int)transformedMatrix[l][l2];
-			pixelMatrix[l][l1+1] = (unsigned int)transformedMatrix[l][l2+1];
-			pixelMatrix[l][l1+2] = (unsigned int)transformedMatrix[l][l2+2];
+			pixelMatrix[l][l1] = (unsigned int)transformedMatrix[l][l1];
+			pixelMatrix[l][l1+1] = (unsigned int)transformedMatrix[l][l1+1];
+			pixelMatrix[l][l1+2] = (unsigned int)transformedMatrix[l][l1+2];
 		}
 	}
 	image->setPixelMatrix(pixelMatrix);
@@ -129,17 +130,17 @@ int PPM::save(char *destFileName, IMat *image, ...)
 	srcPixelMatrix = image->getPixelMatrix();
 	transformedMatrix = new unsigned char* [height];
 	
-	for(int l=0,size=width*image->getPixelAttribute();l<height;l++)
+	for(int l=0,size=width*PPM_CHANNEL_PER_PIXEL;l<height;l++)
 	{
 		transformedMatrix[l] = new unsigned char [size];
-		for(int l1=0,l2=0,gap=image->getPixelAttribute();l1<size;l1+=gap,l2+=CHANNEL_PER_PIXEL)
+		for(int l1=0;l1<size;l1+=PPM_CHANNEL_PER_PIXEL)
 		{
-			transformedMatrix[l][l1] = (unsigned char)srcPixelMatrix[l][l2];
-			transformedMatrix[l][l1+1] = (unsigned char)srcPixelMatrix[l][l2+1];
-			transformedMatrix[l][l1+2] = (unsigned char)srcPixelMatrix[l][l2+2];
+			transformedMatrix[l][l1] = (unsigned char)srcPixelMatrix[l][l1];
+			transformedMatrix[l][l1+1] = (unsigned char)srcPixelMatrix[l][l1+1];
+			transformedMatrix[l][l1+2] = (unsigned char)srcPixelMatrix[l][l1+2];
 		}
 	}
-	for(int l=0,size=width*image->getPixelAttribute();l<height;l++)
+	for(int l=0,size=width*PPM_CHANNEL_PER_PIXEL;l<height;l++)
 	{
 		of.write((char *)transformedMatrix[l],size);
 	}

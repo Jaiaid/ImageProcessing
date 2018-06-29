@@ -46,6 +46,7 @@ public:
 	void neg(IMat *img);											//negative image
 	void threshold(IMat *img,int threshold);                        //intensity thresholding
 	void gammacorrection(IMat *img,float gamma);					//intensity transform by gamma correction
+	void histoequalize(IMat *img);									//histogram equalization
 	void filtering(IMat *img,int type);                             //filter image with filter no. type
 };
 
@@ -365,6 +366,60 @@ void DIP::gammacorrection(IMat *img,float gamma)
 			pixelMatrix[y][indx2+2]=constant*possibleGammaVal[pixelMatrix[y][indx2+2]];
 		}
 	}
+}
+
+void DIP::histoequalize(IMat *img)
+{
+	pixel_t **pixelMatrix;
+	int w, h, pixelAttribute, colorNum;
+	int **pixelFreq;
+	
+	h = img->getHeight(), w = img->getWidth();
+	pixelAttribute = img->getPixelAttribute();
+	colorNum = (1<<(img->getColorDepthBit()));
+	pixelMatrix = img->getPixelMatrix();
+
+	pixelFreq = new int*[CHANNEL_PER_PIXEL];
+	for(int l=0;l<CHANNEL_PER_PIXEL;l++)
+	{
+		pixelFreq[l] = new int[colorNum];
+		for(int l1=0;l1<colorNum;l1++) pixelFreq[l][l1] = 0;
+	}
+
+	for(int y=0;y<h;y++)
+	{
+		for(int x=0,indx2=0,channel=0;x<w;x++,indx2+=CHANNEL_PER_PIXEL)
+		{
+			pixelFreq[channel][pixelMatrix[y][indx2]]++;
+			pixelFreq[channel+1][pixelMatrix[y][indx2+1]]++;
+			pixelFreq[channel+2][pixelMatrix[y][indx2+2]]++;
+		}
+	}
+	
+	for(int l=0;l<CHANNEL_PER_PIXEL;l++)
+	{
+		for(int l1=1;l1<colorNum;l1++)
+		{
+			pixelFreq[l][l1] += pixelFreq[l][l1-1];
+		}
+	}
+	
+	for(int y=0;y<h;y++)
+	{
+		int size = w*h, constant = colorNum-1;
+		for(int x=0,indx2=0,channel=0;x<w;x++,indx2+=CHANNEL_PER_PIXEL)
+		{
+			pixelMatrix[y][indx2]=(constant*pixelFreq[channel][pixelMatrix[y][indx2]])/size;
+			pixelMatrix[y][indx2+1]=(constant*pixelFreq[channel+1][pixelMatrix[y][indx2+1]])/size;
+			pixelMatrix[y][indx2+2]=(constant*pixelFreq[channel+2][pixelMatrix[y][indx2+2]])/size;
+		}
+	}
+	
+	for(int l=0;l<CHANNEL_PER_PIXEL;l++)
+	{
+		delete[] pixelFreq[l];
+	}
+	delete[] pixelFreq;
 }
 
 void DIP::filtering(IMat *img,int filterType)

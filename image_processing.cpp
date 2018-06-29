@@ -38,24 +38,26 @@ int main(int argc, char **argv)
 		cout<<"2.neg"<<endl;
 		cout<<"3.TH <threshold value>"<<endl;
 		cout<<"4.gamma <gamma value>"<<endl;
-		cout<<"5.filter <filter type>"<<endl;
+		cout<<"5.heq"<<endl;
+		cout<<"6.filter <filter type>"<<endl;
 		
 		return 0;
 	}
 
 	DIP imagePrcsr;
 	File *srcImgFile = fileBuilder(argv[1]);
-	File *destImgFile = fileBuilder(argv[1]);
 	IMat *img = srcImgFile->extract();
 
 	if(strcmp(argv[2],"resize")==0){
 		if(argc==7){
 			if(argv[3][0]=='b'){
 				imagePrcsr.bilresize(img,atoi(argv[4]),atoi(argv[5]));
+				File *destImgFile = fileBuilder(argv[6]);
 				destImgFile->save(argv[6],img);
 			}
 			else if(argv[3][0]=='n'){
 				imagePrcsr.nnresize(img,atoi(argv[4]),atoi(argv[5]));
+				File *destImgFile = fileBuilder(argv[6]);
 				destImgFile->save(argv[6],img);
 			}
 			else{
@@ -68,18 +70,27 @@ int main(int argc, char **argv)
 	}
 	else if(strcmp(argv[2],"neg")==0 && argc==4){
 		imagePrcsr.neg(img);
+		File *destImgFile = fileBuilder(argv[3]);
+		destImgFile->save(argv[3],img);
+	}
+	else if(strcmp(argv[2],"heq")==0 && argc==4){
+		imagePrcsr.histoequalize(img);
+		File *destImgFile = fileBuilder(argv[3]);
 		destImgFile->save(argv[3],img);
 	}
 	else if(strcmp(argv[2],"TH")==0 && argc==5){
 		imagePrcsr.threshold(img,atoi(argv[3]));
+		File *destImgFile = fileBuilder(argv[4]);
 		destImgFile->save(argv[4],img);
 	}
 	else if(strcmp(argv[2],"gamma")==0 && argc==5){
 		imagePrcsr.gammacorrection(img,atof(argv[3]));
+		File *destImgFile = fileBuilder(argv[4]);
 		destImgFile->save(argv[4],img);
 	}
 	else if(strcmp(argv[2],"filter")==0 && argc==5){
 		imagePrcsr.filtering(img,atoi(argv[3]));
+		File *destImgFile = fileBuilder(argv[4]);
 		destImgFile->save(argv[4],img);
 	}
 	else{
